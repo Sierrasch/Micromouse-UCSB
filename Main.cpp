@@ -1,9 +1,13 @@
 #include <iostream>
+#include <unistd.h>
 
 using namespace std;
 
 #define WIDTH 16
 #define HEIGHT 16
+
+#define CENTER_X 7
+#define CENTER_Y 7
 
 #define NORTH 1
 #define SOUTH 2
@@ -94,11 +98,18 @@ struct QueueNode {
     uint8_t x;
     uint8_t y;
     QueueNode *prev;
+
+    QueueNode(uint8_t nx, uint8_t ny){
+        x = nx;
+        y = ny;
+    }
 };
 
 Space g_board[WIDTH][HEIGHT];
 QueueNode *g_queueHead;
 QueueNode *g_queueTail;
+uint8_t currentX;
+uint8_t currentY;
 
 void resetFullPath() {
     for(int i = 0; i < WIDTH; i++){
@@ -118,7 +129,110 @@ void resetPartPath() {
     }
 }
 
-void print(uint8_t size){
+void initializeWalls(){
+    for(int i = 0; i < WIDTH; i++){
+        g_board[i][0].hasNorthWall();
+        g_board[i][HEIGHT - 1].hasSouthWall();
+    }
+    for(int i = 0; i < HEIGHT; i++){
+        g_board[0][i].hasWestWall();
+        g_board[WIDTH - 1][i].hasEastWall();
+    }
+}
+
+void print(){
+    char blue[] = { 0x1b, '[', '3', '4', 'm', 0 };
+    char red[] = { 0x1b, '[', '3', '1', 'm', 0 };
+    char yellow[] = { 0x1b, '[', '3', '3', 'm', 0 };
+    char underline[] = {0x1b, '[', '4', 'm', 0};
+    char noColor[] = { 0x1b, '[', '3', '9', 'm', 0};
+    char noFormat[] = {0x1b, '[', '0', 'm', 0};
+
+    cout << noColor;
+
+    cout << underline;
+    cout << " ";
+    for(int i = 0; i < WIDTH; i++) cout << "  ";
+    cout << noFormat << endl;
+
+    for(int y = 0; y < HEIGHT; y++){
+        if(y == HEIGHT - 1){
+            cout << underline;
+        }
+        cout << '|';
+        cout << noFormat;
+        for(int x = 0; x < WIDTH; x++){
+            if(x == CENTER_X && y == CENTER_Y) cout << red;
+            else {
+                if(g_board[x][y].c_fullPathPos != 0) cout << yellow;
+                else {
+                    if (g_board[x][y].visited()) cout << blue;
+                }
+            }
+            if(g_board[x][y].southWall()) cout << underline;
+            cout << (x == currentX && y == currentY ? 'X' : 'O');
+            cout << noColor;
+            if(g_board[x][y].eastWall()) cout << '|';
+            else cout << ' ';
+            cout << noFormat;
+        }
+        cout << endl;
+    }
+    cout << endl;
+}
+
+QueueNode* dequeue(){
+    QueueNode* res = g_queueHead;
+    if(res != NULL) g_queueHead = g_queueHead->prev;
+    if(g_queueHead == NULL) g_queueTail == NULL;
+    return res;
+}
+
+void enqueue(QueueNode* n){
+    if(g_queueTail != NULL){
+        g_queueTail->prev = n;
+    }
+    else{
+        g_queueHead = n;
+    }
+    g_queueTail = n;
+}
+
+void clearQueue(){
+    while(g_queueTail != NULL) delete dequeue();
+}
+
+void floodFillFrom(uint8_t startX, uint8_t startY){
+    if(!g_board[startX][startY].northWall() && !g_board[startX][startY - 1].visited()){
+        g_board[startX][startY - 1].visit();
+        g_board[startX][startY - 1].setVisitedFromX(startX);
+        g_board[startX][startY - 1].setVisitedFromY(startY);
+        enqueue(new QueueNode(startX, startY - 1));
+    }
+
+    if(!g_board[startX][startY].southWall() && !g_board[startX][startY + 1].visited()){
+        g_board[startX][startY + 1].visit();
+        g_board[startX][startY + 1].setVisitedFromX(startX);
+        g_board[startX][startY + 1].setVisitedFromY(startY);
+        enqueue(new QueueNode(startX, startY + 1));
+    }
+
+    if(!g_board[startX][startY].eastWall() && !g_board[startX + 1][startY].visited()){
+        g_board[startX + 1][startY].visit();
+        g_board[startX + 1][startY].setVisitedFromX(startX);
+        g_board[startX + 1][startY].setVisitedFromY(startY);
+        enqueue(new QueueNode(startX + 1, startY));
+    }
+
+    if(!g_board[startX][startY].westWall() && !g_board[startX - 1][startY].visited()){
+        g_board[startX - 1][startY].visit();
+        g_board[startX - 1][startY].setVisitedFromX(startX);
+        g_board[startX - 1][startY].setVisitedFromY(startY);
+        enqueue(new QueueNode(startX - 1, startY));
+    }
+}
+
+void printDebug(uint8_t size){
     for(int i = 0; i < size; i++){
         for(int j = 0; j < size; j++){
             cout << i << "\t" << j << endl;
@@ -134,31 +248,48 @@ void print(uint8_t size){
     }
 }
 
-QueueNode* dequeue(){
-    QueueNode* res = g_queueHead;
-    if(res != NULL) g_queueHead = g_queueHead->prev;
-    return res;
-}
+uint8_t floodFillMain(uint8_t startX, uint8_t startY, uint8_t goalX, uint8_t goalY){
+    uint8_t originalStartX = startX;
+    uint8_t  originalStartY = startY;
 
-void enqueue(QueueNode* n){
-    if(g_queueTail != NULL){
-        g_queueTail->prev = n;
+    resetFullPath();
+    clearQueue();
+
+    g_board[startX][startY].visit();
+
+    while(!g_board[goalX][goalY].visited()){
+        floodFillFrom(startX, startY);
+
+        if(g_queueHead == NULL) return 1;
+
+        QueueNode* next = dequeue();
+        startX = next->x;
+        startY = next->y;
+        delete next;
+        print();
+        usleep(250000);
     }
-    g_queueTail = n;
-}
 
-void floodFillMain(int startX, int startY, int goalX, int goalY){
-    // Still working on this.
+    uint8_t counter = 0;
+    startX = goalX;
+    startY = goalY;
+    while(startX != originalStartX || startY != originalStartY){
+        g_board[startX][startY].c_fullPathPos = counter;
+        counter++;
+        uint8_t tempX = startX;
+        startX = g_board[startX][startY].visitedFromX();
+        startY = g_board[tempX][startY].visitedFromY();
+    }
+
+    return 0;
 }
 
 int main() {
+    currentX = 0;
+    currentY = 0;
     resetFullPath();
     resetPartPath();
-
-    g_board[0][0].visit();
-    g_board[0][0].setVisitedFromX(4);
-    g_board[0][0].setVisitedFromY(15);
-    g_board[0][0].hasEastWall();
-
-    print(1);
+    initializeWalls();
+    (int)floodFillMain(currentX, currentY, CENTER_X, CENTER_Y);
+    print();
 }
