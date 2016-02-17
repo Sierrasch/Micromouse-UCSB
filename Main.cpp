@@ -104,7 +104,7 @@ private:
 public:
     QueueNode *prev;
 
-    QueueNode(uint8_t x, uint8_t y){
+    QueueNode(const uint8_t& x, const uint8_t& y){
         pos = (pos & 240) | x;
         pos = (pos & 15) | (y << 4);
         prev = NULL;
@@ -213,7 +213,7 @@ void print(){
         cout << endl;
     }
     cout << endl;
-    usleep(50000);
+    usleep(100000);
 }
 
 QueueNode* dequeue(){
@@ -263,17 +263,7 @@ QueueNode prevInMainPath(const uint8_t& x, const uint8_t& y){
 }
 
 bool pointInMainPath(const uint8_t& x, const uint8_t& y){
-    uint8_t currentX = START_X;
-    uint8_t currentY = START_Y;
-    if(currentX == x && currentY == y) return true;
-
-    while(currentX != CENTER_X || currentY != CENTER_Y){
-        QueueNode nextPoint = nextInMainPath(currentX, currentY);
-        currentX = nextPoint.x();
-        currentY = nextPoint.y();
-        if(currentX == x && currentY == y) return true;
-    }
-    return false;
+    return g_board[x][y].c_fullPathPos != 0 || (x == CENTER_X && y == CENTER_Y);
 }
 
 QueueNode nextInPartPath(const uint8_t& x, const uint8_t& y){
@@ -414,7 +404,7 @@ uint8_t floodFillPartial(){
     return 0;
 }
 
-void printDebug(uint8_t size){
+void printDebug(const uint8_t& size){
     for(int i = 0; i < size; i++){
         for(int j = 0; j < size; j++){
             cout << i << "\t" << j << endl;
