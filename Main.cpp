@@ -7,8 +7,8 @@ using namespace std;
 #define WIDTH 16
 #define HEIGHT 16
 
-#define CENTER_X 15
-#define CENTER_Y 15
+#define CENTER_X 8
+#define CENTER_Y 7
 
 #define START_X 0
 #define START_Y 0
