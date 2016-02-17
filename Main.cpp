@@ -508,8 +508,8 @@ int main() {
 
     initializeWalls();
 
-    g_currentX = CENTER_X;
-    g_currentY = CENTER_Y;
+    g_currentX = START_X;
+    g_currentY = START_Y;
 
     while(true) {
         resetFullPath();
