@@ -1,13 +1,14 @@
 #include <iostream>
 #include <unistd.h>
+#include <string>
 
 using namespace std;
 
 #define WIDTH 16
 #define HEIGHT 16
 
-#define CENTER_X 13
-#define CENTER_Y 4
+#define CENTER_X 8
+#define CENTER_Y 15
 
 #define START_X 0
 #define START_Y 0
@@ -34,6 +35,10 @@ public:
         c_visitedFrom = 0;
         c_fullPathPos = 0;
         c_partPathPos = 0;
+    }
+
+    void setWalls(uint8_t w){
+        c_data = (c_data & 240) | (w & 15);
     }
 
     bool northWall() {
@@ -421,14 +426,21 @@ void printDebug(const uint8_t& size){
 }
 
 int main() {
-    g_currentX = 5;
-    g_currentY = 10;
+    uint8_t input[WIDTH][HEIGHT];
+    string str;
+    for(int y = 0; y < HEIGHT; y++){
+        for(int x = 0; x < WIDTH; x++) {
+            if(x != WIDTH - 1) getline(cin, str, ',');
+            else getline(cin, str, '\n');
+            input[x][y] = atoi(str.c_str());
+            g_board[x][y].setWalls(input[x][y]);
+        }
+    }
+
     initializeWalls();
 
-    g_board[3][4].hasEastWall();
-    g_board[4][4].hasWestWall();
-    g_board[5][5].hasSouthWall();
-    g_board[5][6].hasNorthWall();
+    g_currentX = 15;
+    g_currentY = 7;
 
     while(true) {
         resetFullPath();
