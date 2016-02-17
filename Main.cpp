@@ -7,11 +7,11 @@ using namespace std;
 #define WIDTH 16
 #define HEIGHT 16
 
-#define CENTER_X 15
-#define CENTER_Y 0
+#define CENTER_X 8
+#define CENTER_Y 15
 
-#define START_X 0
-#define START_Y 15
+#define START_X 15
+#define START_Y 0
 
 #define NORTH 1
 #define SOUTH 2
@@ -180,12 +180,12 @@ void unvisitAll(){
 
 void initializeWalls(){
     for(int i = 0; i < WIDTH; i++){
-        g_board[i][0].hasNorthWall();
-        g_board[i][HEIGHT - 1].hasSouthWall();
+        wallExists(i, 0, NORTH);
+        wallExists(i, HEIGHT - 1, SOUTH);
     }
     for(int i = 0; i < HEIGHT; i++){
-        g_board[0][i].hasWestWall();
-        g_board[WIDTH - 1][i].hasEastWall();
+        wallExists(0, i, WEST);
+        wallExists(WIDTH - 1, i, EAST);
     }
 }
 
@@ -320,19 +320,19 @@ uint8_t moveTo(const uint8_t& x, const uint8_t& y){
 QueueNode nextInMainPath(const uint8_t& x, const uint8_t& y){
     uint8_t nextInd = g_board[x][y].c_fullPathPos - 1;
     if(nextInd == 0) return QueueNode(CENTER_X, CENTER_Y);
-    if(g_board[x - 1][y].c_fullPathPos == nextInd) return QueueNode(x - 1, y);
-    if(g_board[x + 1][y].c_fullPathPos == nextInd) return QueueNode(x + 1, y);
-    if(g_board[x][y - 1].c_fullPathPos == nextInd) return QueueNode(x, y - 1);
-    if(g_board[x][y + 1].c_fullPathPos == nextInd) return QueueNode(x, y + 1);
+    if(x > 0 && g_board[x - 1][y].c_fullPathPos == nextInd) return QueueNode(x - 1, y);
+    if(x < WIDTH - 1 && g_board[x + 1][y].c_fullPathPos == nextInd) return QueueNode(x + 1, y);
+    if(y > 0 && g_board[x][y - 1].c_fullPathPos == nextInd) return QueueNode(x, y - 1);
+    if(y < HEIGHT - 1 && g_board[x][y + 1].c_fullPathPos == nextInd) return QueueNode(x, y + 1);
 }
 
 QueueNode prevInMainPath(const uint8_t& x, const uint8_t& y){
     uint8_t nextInd = g_board[x][y].c_fullPathPos + 1;
     if(nextInd == 0) return QueueNode(CENTER_X, CENTER_Y);
-    if(g_board[x - 1][y].c_fullPathPos == nextInd) return QueueNode(x - 1, y);
-    if(g_board[x + 1][y].c_fullPathPos == nextInd) return QueueNode(x + 1, y);
-    if(g_board[x][y - 1].c_fullPathPos == nextInd) return QueueNode(x, y - 1);
-    if(g_board[x][y + 1].c_fullPathPos == nextInd) return QueueNode(x, y + 1);
+    if(x > 0 && g_board[x - 1][y].c_fullPathPos == nextInd) return QueueNode(x - 1, y);
+    if(x < WIDTH - 1 && g_board[x + 1][y].c_fullPathPos == nextInd) return QueueNode(x + 1, y);
+    if(y > 0 && g_board[x][y - 1].c_fullPathPos == nextInd) return QueueNode(x, y - 1);
+    if(y < HEIGHT - 1 && g_board[x][y + 1].c_fullPathPos == nextInd) return QueueNode(x, y + 1);
 }
 
 bool pointInMainPath(const uint8_t& x, const uint8_t& y){
@@ -342,15 +342,15 @@ bool pointInMainPath(const uint8_t& x, const uint8_t& y){
 QueueNode nextInPartPath(const uint8_t& x, const uint8_t& y){
     uint8_t nextInd = g_board[x][y].c_partPathPos - 1;
     if(nextInd == 0){
-        if(pointInMainPath(x - 1, y) && !g_board[x][y].westWall()) return QueueNode(x - 1, y);
-        if(pointInMainPath(x + 1, y) && !g_board[x][y].eastWall()) return QueueNode(x + 1, y);
-        if(pointInMainPath(x, y - 1) && !g_board[x][y].northWall()) return QueueNode(x, y - 1);
-        if(pointInMainPath(x, y + 1) && !g_board[x][y].southWall()) return QueueNode(x, y + 1);
+        if(x > 0 && pointInMainPath(x - 1, y) && !g_board[x][y].westWall()) return QueueNode(x - 1, y);
+        if(x < WIDTH - 1 && pointInMainPath(x + 1, y) && !g_board[x][y].eastWall()) return QueueNode(x + 1, y);
+        if(y > 0 && pointInMainPath(x, y - 1) && !g_board[x][y].northWall()) return QueueNode(x, y - 1);
+        if(y < HEIGHT - 1 && pointInMainPath(x, y + 1) && !g_board[x][y].southWall()) return QueueNode(x, y + 1);
     }
-    if(g_board[x - 1][y].c_partPathPos == nextInd) return QueueNode(x - 1, y);
-    if(g_board[x + 1][y].c_partPathPos == nextInd) return QueueNode(x + 1, y);
-    if(g_board[x][y - 1].c_partPathPos == nextInd) return QueueNode(x, y - 1);
-    if(g_board[x][y + 1].c_partPathPos == nextInd) return QueueNode(x, y + 1);
+    if(x > 0 && g_board[x - 1][y].c_partPathPos == nextInd) return QueueNode(x - 1, y);
+    if(x < WIDTH - 1 && g_board[x + 1][y].c_partPathPos == nextInd) return QueueNode(x + 1, y);
+    if(y > 0 && g_board[x][y - 1].c_partPathPos == nextInd) return QueueNode(x, y - 1);
+    if(y < HEIGHT - 1 && g_board[x][y + 1].c_partPathPos == nextInd) return QueueNode(x, y + 1);
 }
 
 uint8_t followMain(){
