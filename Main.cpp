@@ -7,11 +7,11 @@ using namespace std;
 #define WIDTH 16
 #define HEIGHT 16
 
-#define CENTER_X 8
-#define CENTER_Y 15
+#define CENTER_X 15
+#define CENTER_Y 0
 
 #define START_X 0
-#define START_Y 0
+#define START_Y 15
 
 #define NORTH 1
 #define SOUTH 2
@@ -125,10 +125,32 @@ public:
 };
 
 Space g_board[WIDTH][HEIGHT];
+Space g_realBoard[WIDTH][HEIGHT];
 QueueNode *g_queueHead;
 QueueNode *g_queueTail;
 uint8_t g_currentX;
 uint8_t g_currentY;
+
+void wallExists(const uint8_t& x, const uint8_t& y, const uint8_t& dir){
+    switch(dir){
+        case NORTH:
+            g_board[x][y].hasNorthWall();
+            if(y > 0) g_board[x][y - 1].hasSouthWall();
+            break;
+        case SOUTH:
+            g_board[x][y].hasSouthWall();
+            if(y < HEIGHT - 1) g_board[x][y + 1].hasNorthWall();
+            break;
+        case WEST:
+            g_board[x][y].hasWestWall();
+            if(x > 0) g_board[x - 1][y].hasEastWall();
+            break;
+        case EAST:
+            g_board[x][y].hasEastWall();
+            if(x < WIDTH - 1) g_board[x + 1][y].hasWestWall();
+            break;
+    }
+}
 
 void resetFullPath() {
     for(int i = 0; i < WIDTH; i++){
@@ -218,7 +240,7 @@ void print(){
         cout << endl;
     }
     cout << endl;
-    usleep(100000);
+    usleep(150000);
 }
 
 QueueNode* dequeue(){
@@ -243,10 +265,56 @@ void clearQueue(){
 }
 
 uint8_t moveTo(const uint8_t& x, const uint8_t& y){
-    g_currentX = x;
-    g_currentY = y;
-    print();
-    return 0;
+    int8_t xDif = x - g_currentX;
+    int8_t yDif = y - g_currentY;
+    bool moved = false;
+    if(xDif == -1){
+        if(g_realBoard[g_currentX][g_currentY].westWall()){
+            wallExists(g_currentX, g_currentY, WEST);
+            return 1;
+        }
+        else{
+            g_currentX--;
+            moved = true;
+        }
+    }
+    if(xDif == 1){
+        if(g_realBoard[g_currentX][g_currentY].eastWall()){
+            wallExists(g_currentX, g_currentY, EAST);
+            return 1;
+        }
+        else{
+            g_currentX++;
+            moved = true;
+        }
+    }
+    if(yDif == -1){
+        if(g_realBoard[g_currentX][g_currentY].northWall()){
+            wallExists(g_currentX, g_currentY, NORTH);
+            return 1;
+        }
+        else{
+            g_currentY--;
+            moved = true;
+        }
+    }
+    if(yDif == 1){
+        if(g_realBoard[g_currentX][g_currentY].southWall()){
+            wallExists(g_currentX, g_currentY, SOUTH);
+            return 1;
+        }
+        else{
+            g_currentY++;
+            moved = true;
+        }
+    }
+
+    if(g_realBoard[g_currentX][g_currentY].northWall()) wallExists(g_currentX, g_currentY, NORTH);
+    if(g_realBoard[g_currentX][g_currentY].southWall()) wallExists(g_currentX, g_currentY, SOUTH);
+    if(g_realBoard[g_currentX][g_currentY].eastWall()) wallExists(g_currentX, g_currentY, EAST);
+    if(g_realBoard[g_currentX][g_currentY].westWall()) wallExists(g_currentX, g_currentY, WEST);
+
+    return moved ? 0 : 1;
 }
 
 QueueNode nextInMainPath(const uint8_t& x, const uint8_t& y){
@@ -289,6 +357,7 @@ uint8_t followMain(){
     while(g_currentX != CENTER_X || g_currentY != CENTER_Y) {
         QueueNode next = nextInMainPath(g_currentX, g_currentY);
         if (moveTo(next.x(), next.y()) != 0) return 1;
+        print();
     }
     return 0;
 }
@@ -297,6 +366,7 @@ uint8_t followMainBack(){
     while(g_currentX != START_X || g_currentY != START_Y) {
         QueueNode next = prevInMainPath(g_currentX, g_currentY);
         if (moveTo(next.x(), next.y()) != 0) return 1;
+        print();
     }
     return 0;
 }
@@ -305,6 +375,7 @@ uint8_t followPart(){
     while(!pointInMainPath(g_currentX, g_currentY)) {
         QueueNode next = nextInPartPath(g_currentX, g_currentY);
         if (moveTo(next.x(), next.y()) != 0) return 1;
+        print();
     }
     return 0;
 }
@@ -357,7 +428,6 @@ uint8_t floodFillMain(){
         currentX = next->x();
         currentY = next->y();
         delete next;
-        print();
     }
 
     uint8_t counter = 0;
@@ -393,7 +463,6 @@ uint8_t floodFillPartial(){
         currentX = next->x();
         currentY = next->y();
         delete next;
-        print();
     }
 
     uint8_t counter = 0;
@@ -433,14 +502,14 @@ int main() {
             if(x != WIDTH - 1) getline(cin, str, ',');
             else getline(cin, str, '\n');
             input[x][y] = atoi(str.c_str());
-            g_board[x][y].setWalls(input[x][y]);
+            g_realBoard[x][y].setWalls(input[x][y]);
         }
     }
 
     initializeWalls();
 
-    g_currentX = 15;
-    g_currentY = 7;
+    g_currentX = CENTER_X;
+    g_currentY = CENTER_Y;
 
     while(true) {
         resetFullPath();
@@ -458,16 +527,16 @@ int main() {
         unvisitAll();
         if(followPart() != 0){
             cout << "Could not follow part" << endl;
-            return 1;
+            continue;
         }
         if(followMain() != 0) {
             cout << "Could not follow main" << endl;
-            return 1;
+            continue;
         }
         if(followMainBack() == 0) break;
         else {
             cout << "Could not follow main back" << endl;
-            return 1;
+            continue;
         }
     }
     print();
